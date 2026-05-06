@@ -2,8 +2,17 @@ from fastapi import FastAPI, HTTPException
 import requests
 import os
 from prometheus_fastapi_instrumentator import Instrumentator
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 
 Instrumentator().instrument(app).expose(app)
 
