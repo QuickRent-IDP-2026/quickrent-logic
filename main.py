@@ -1,8 +1,11 @@
 from fastapi import FastAPI, HTTPException
 import requests
 import os
+from prometheus_fastapi_instrumentator import Instrumentator
 
 app = FastAPI()
+
+Instrumentator().instrument(app).expose(app)
 
 AUTH_SERVICE_URL = os.getenv("AUTH_SERVICE_URL", "http://auth-service:8000")
 DATA_SERVICE_URL = os.getenv("DATA_SERVICE_URL", "http://data-service:8000")
@@ -17,7 +20,22 @@ def get_system_status():
 
 @app.post("/rent")
 def rent_scooter(rental_data: dict):
-    # Logica de business: 
-    # 1. Verificăm userul prin Data Service
-    # 2. Dacă e valid, procesăm închirierea
-    return {"message": f"Scooter {rental_data['scooter_id']} rented to user {rental_data['username']}"}
+    # Get user info from Data Service
+    scooters = requests.get(f"{DATA_SERVICE_URL}/scooters").json()
+    
+    # 2. Search for the scooter in the list and check availability
+    target = next((s for s in scooters if s['id'] == rental_data['scooter_id']), None)
+    
+    if not target:
+        raise HTTPException(status_code=404, detail="Scooter not found")
+    
+    if not target['is_available']:
+        raise HTTPException(status_code=400, detail="Scooter already rented")
+
+    # 3. Execute the rental by updating the scooter's availability in the Data Service
+    requests.put(f"{DATA_SERVICE_URL}/scooters/{target['id']}/rent?available=false")
+    
+    return {
+        "status": "Success",
+        "message": f"User {rental_data['username']} has rented {target['model']}"
+    }
