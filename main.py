@@ -18,6 +18,16 @@ def get_system_status():
         "status": "Ready to process rentals"
     }
 
+@app.get("/catalog")
+def get_catalog():
+    response = requests.get(f"{DATA_SERVICE_URL}/scooters")
+    return response.json()
+
+@app.post("/admin/add-scooter")
+def add_scooter(scooter_data: dict):
+    response = requests.post(f"{DATA_SERVICE_URL}/scooters", json=scooter_data)
+    return response.json()
+
 @app.post("/rent")
 def rent_scooter(rental_data: dict):
     # Get user info from Data Service
